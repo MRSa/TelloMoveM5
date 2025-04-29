@@ -1,5 +1,5 @@
 // ===========================
 //   My WiFi credentials
 // ===========================
-const char* ssid = "**********";
-const char* password = "**********";
+const char* wifi_ssid = "**********";
+const char* wifi_key = "**********";
