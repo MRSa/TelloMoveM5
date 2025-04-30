@@ -14,6 +14,10 @@ AsyncUDP udp;
 AsyncUDP udpStatus1;
 AsyncUDP udpStatus2;
 
+int batteryRemainM5;
+int batteryRemainTello;
+char commandMessageBuffer[256];
+
 // ==========================================================
 //  Enter your Tello's Wi-Fi credentials  in 'wifi_creds.h'.
 // ==========================================================
@@ -21,18 +25,73 @@ AsyncUDP udpStatus2;
 //const char* wifi_ssid = "**********";  // defined in 'wifi_creds.h'
 //const char* wifi_key = "**********";   // defined in 'wifi_creds.h'
 
+void displayMessage(char *message, int fontColor = TFT_WHITE)
+{
+    if (strlen(message) > 0)
+    {
+        strncpy(commandMessageBuffer, message, 255);
+    }
+    M5.Lcd.fillScreen(TFT_BLACK);
+	M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+    M5.Lcd.setCursor(0, 0);
+    M5.Lcd.setFont(&fonts::efontJA_24_b);
+    M5.Lcd.print("TelloMoveM5\n\n");
+
+    M5.Lcd.setFont(&fonts::lgfxJapanGothic_24);
+	M5.Lcd.setTextColor(fontColor, TFT_BLACK);
+    M5.Lcd.setCursor(0, 30);
+    M5.Display.println(commandMessageBuffer);
+
+    M5.Lcd.setCursor(0, 85);
+    char batteryM5[64];
+    sprintf(batteryM5, "    電池残量(M5) : %d %%", batteryRemainM5);
+    M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
+    M5.Lcd.setTextColor(getFontColor(batteryRemainM5), TFT_BLACK);
+    M5.Display.println(batteryM5);
+
+    if (batteryRemainTello > 0)
+    {
+        M5.Lcd.setCursor(0, 105);
+        sprintf(batteryM5, "    電池残量(Tello): %d %%", batteryRemainTello);
+        M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
+        M5.Lcd.setTextColor(getFontColor(batteryRemainTello), TFT_BLACK);
+        M5.Display.println(batteryM5);
+    }
+}
+
 void receivedStatus1(AsyncUDPPacket& packet)
 {
-    Serial.write("RX(1): ");
-    Serial.write(packet.data(), packet.length());
-    Serial.write("\n");
+    try
+    {
+        // ----- Tello からのステータス情報からバッテリ残量のみ抜き出す
+        String receivedString = String((char *) packet.data());
+        int startIndex = receivedString.indexOf("bat:");
+        int endIndex = receivedString.indexOf(";", startIndex);
+        String batteryRemainString = receivedString.substring(startIndex + 4, endIndex);
+
+        int battery_remain = atoi(batteryRemainString.c_str());
+        if (batteryRemainTello != battery_remain)
+        {
+            batteryRemainTello = battery_remain;
+            displayMessage("");
+        }
+        //Serial.write("RX(status): ");
+        //Serial.write(packet.data(), packet.length());
+        //Serial.write("\n");
+    }
+    catch (...)
+    {
+        batteryRemainTello = -1;
+        Serial.write("\n");
+    }
 }
 
 void receivedStatus2(AsyncUDPPacket& packet)
 {
-    Serial.write("RX(2): ");
-    Serial.write(packet.data(), packet.length());
-    Serial.write("\n");
+    //
+    //Serial.write("RX(2): ");
+    //Serial.write(packet.data(), packet.length());
+    //Serial.write("\n");
 }
 
 void sendCommandToTello(char *command)
@@ -62,18 +121,17 @@ void prepareScreen()
     M5.Lcd.setFont(&fonts::efontJA_24);
 }
 
-void displayMessage(char *message, int fontColor = TFT_WHITE)
+int getFontColor(int value)
 {
-    M5.Lcd.fillScreen(TFT_BLACK);
-	M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-    M5.Lcd.setCursor(0, 0);
-    M5.Lcd.setFont(&fonts::efontJA_24_b);
-    M5.Lcd.print("TelloMoveM5\n\n");
-
-    M5.Lcd.setFont(&fonts::lgfxJapanGothic_24);
-	M5.Lcd.setTextColor(fontColor, TFT_BLACK);
-    M5.Lcd.setCursor(0, 30);
-    M5.Display.println(message);
+    int color = TFT_WHITE;
+    if (batteryRemainM5 < 50) {
+        color = TFT_YELLOW;
+    } else if (batteryRemainM5 < 20) {
+        color = TFT_RED;
+    } else if (batteryRemainM5 < 20) {
+        color = TFT_DARKGREY;
+    }
+    return (color);
 }
 
 void takeoffHandler()
@@ -185,7 +243,7 @@ void ccw90Handler()
 
 void emergencyHandler()
 {
-    displayMessage("緊急!", TFT_ORANGE);
+    displayMessage("緊急停止!", TFT_ORANGE);
     sendCommandToTello("emergency");
 }
 
@@ -314,6 +372,11 @@ void setup()
 
     M5.begin(cfg);
 
+    M5.Power.begin(); 
+
+    batteryRemainM5 = M5.Power.getBatteryLevel();
+    batteryRemainTello = -1;
+
     // ----- LED(RED) OFF : for M5StickC Plus
     pinMode(GPIO_NUM_10, OUTPUT);
     digitalWrite(GPIO_NUM_10, HIGH);
@@ -367,5 +430,12 @@ void loop()
         displayMessage("EMERGENCY (Btn B)");
         asr.sendComandNum(0x99);
         emergencyHandler();
+    }
+
+    int batteryRemain = M5.Power.getBatteryLevel();
+    if (batteryRemain != batteryRemainM5)
+    {
+        batteryRemainM5 = batteryRemain;
+        displayMessage("");
     }
 }
