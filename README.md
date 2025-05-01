@@ -11,15 +11,15 @@ M5を起動すると、Telloに接続しようとします。接続されるま�
 Telloと接続すると、「接続しました」とUnit ASRから発声しますので、所望の操作を
 Unit ASRに呼びかけてください。
 
+基本、受け付けたコマンドを画面表示と音声で応答し、Telloを制御します。
+M5とTelloの電池残量をパーセント表示します。
+
 なお、Bボタン（M5StickC Plusの場合は右サイドボタン）を押すと、緊急停止のコマンドを
 Telloに対して発行します。
 
 ![表示説明](https://github.com/MRSa/TelloMoveM5/blob/main/images/M5StickCPlus.png?raw=true)
 
 ## 音声コマンド一覧
-
-基本、受け付けたコマンドを画面表示と音声で応答し、Telloを制御します。
-M5とTelloの電池残量をパーセント表示します。
 
 音声入力を受け付ける用語は、以下となります。後述の[Unit ASRのファームウェア](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v104.bin)を使用して下さい。
 
