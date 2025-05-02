@@ -1,9 +1,23 @@
 # TelloMoveM5
 
-TelloMoveM5は、Telloを M5StickC Plus + Unit ASRを使って、音声で操作するアプリケーションです。
-なお、TelloMoveM5は、M5Unified を使用して作成していますので、M5StickC Plusでなくても動作するはずです。
+TelloMoveM5は、Telloを [M5StickC Plus](https://docs.m5stack.com/ja/core/m5stickc_plus)と[Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)を使って、音声で操作するアプリケーションです。
+[M5Unifiedライブラリ](https://docs.m5stack.com/ja/arduino/m5unified/helloworld) を使用して作成していますので、[M5StickC Plus](https://docs.m5stack.com/ja/core/m5stickc_plus)でなくても動作するはずです。
 
 ![TelloMoveM5イメージ](https://github.com/MRSa/TelloMoveM5/blob/main/images/TelloMoveM5.jpg?raw=true)
+
+## システム構成
+
+![システム構成](https://github.com/MRSa/TelloMoveM5/blob/main/images/TelloMoveM5_system?raw=true)
+
+* [Telloドローン](https://www.ryzerobotics.com/jp/tello)
+* [M5StickC Plus](https://docs.m5stack.com/ja/core/m5stickc_plus)
+* [Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)
+
+## 前提条件
+
+[Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)は、[Unit ASRのカスタムファームウェア](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v104.bin)の使用が前提です。
+
+
 
 ## 動作説明
 
@@ -21,13 +35,27 @@ Telloに対して発行します。
 
 ## 音声コマンド一覧
 
-音声入力を受け付ける用語は、以下となります。後述の[Unit ASRのファームウェア](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v104.bin)を使用して下さい。
+音声入力を受け付ける用語は、以下となります。
 
 ![コマンド一覧](https://github.com/MRSa/TelloMoveM5/blob/main/images/commands.png?raw=true)
 
-## Unit ASRのファームウェア
+## Unit ASR（カスタムファームウェアおよびフラッシング）
 
-- [V1.04(Apr.29, 2025)](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v104.bin)
+詳細は、[Unit ASRのリポジトリ](https://github.com/MRSa/GokigenOSDN_documents/tree/main/miscellaneous/M5/UnitASR)を参照してください。
+
+ファームウェアのフラッシングには、[Stamp ISP](https://docs.m5stack.com/ja/module/StampISP)を使用しました。（Groveケーブルは、 RXD, TXD, 5VIN, GND に接続します。）
+
+フラッシング時の注意点は、[Unit ASR ファームウェアフラッシングツール](https://docs.m5stack.com/ja/guide/offline_voice/unit_asr/firmware)の記載、「フラッシングツールが対応するポートを検出したら、ポートを選択してダウンロードを有効にします。 **その後、Unit ASRを接続し、** プログラムのダウンロードを開始します。」とあるように、ダウンロードを有効にしてから Unit ASRを接続することでした。
+
+* [V1.04(Apr.29, 2025)](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v104.bin)
+
+## 参考リンク
+
+* [Tello SDK](https://terra-1-g.djicdn.com/2d4dce68897a46b19fc717f3576b7c6a/Tello%20%E7%BC%96%E7%A8%8B%E7%9B%B8%E5%85%B3/For%20Tello/Tello%20SDK%20Documentation%20EN_1.3_1122.pdf)
+* [Unit ASR カスタムファームウェアの生成とフラッシング](https://docs.m5stack.com/ja/guide/offline_voice/unit_asr/firmware)
+* [smartpi.cn](https://www.smartpi.cn/)
+* [Unit ASR ファームウェアフラッシングツール](https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/635/CI-03T_Serial_burning_software_V3.7.3.zip)
+* [Stamp ISP](https://docs.m5stack.com/ja/module/StampISP)
 
 -----
 
