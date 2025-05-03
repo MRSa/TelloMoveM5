@@ -15,13 +15,15 @@ TelloMoveM5は、[Tello](https://www.ryzerobotics.com/jp/tello)を [M5StickC Plu
 
 ## 前提条件
 
-* [Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)は、[Unit ASRのカスタムファームウェア](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v104.bin)のフラッシングが必要です。
+* [Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)は、[Unit ASRのカスタムファームウェア](https://github.com/MRSa/GokigenOSDN_documents/tree/main/miscellaneous/M5/UnitASR)のフラッシングが必要です。
 * [Tello](https://www.ryzerobotics.com/jp/tello)とWi-Fi経由で接続するために、**wifi_creds.h** に [Tello](https://www.ryzerobotics.com/jp/tello)の SSID および KEY 設定が必要です。(以下の部分です)
 
 ```c++:wifi_creds.h
     const char* wifi_ssid = "TELLO-xxxxxx";
     const char* wifi_key = "";
 ```
+
+----
 
 ## 動作説明
 
@@ -41,13 +43,19 @@ M5を起動すると、自動で[Tello](https://www.ryzerobotics.com/jp/tello)�
 
 ![コマンド一覧](https://github.com/MRSa/TelloMoveM5/blob/main/images/commands.png?raw=true)
 
+----
+
 ## [Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)（カスタムファームウェアおよびフラッシング）
 
 詳細は、[Unit ASRのリポジトリ](https://github.com/MRSa/GokigenOSDN_documents/tree/main/miscellaneous/M5/UnitASR)を参照してください。
 
 ファームウェアのフラッシングには、[Stamp ISP](https://docs.m5stack.com/ja/module/StampISP)を使用しました。（Groveケーブルを、 RXD, TXD, 5VIN, GND に接続します。）
 
-フラッシングの実行は、[Unit ASR ファームウェアフラッシングツール](https://docs.m5stack.com/ja/guide/offline_voice/unit_asr/firmware)の記載、「フラッシングツールが対応するポートを検出したら、ポートを選択してダウンロードを有効にします。 **その後、Unit ASRを接続し、** プログラムのダウンロードを開始します。」の通りで、ダウンロードのチェックを入れてから [Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)を接続する必要があります。ご注意ください。
+![M5 StampISPとの接続](https://github.com/MRSa/GokigenOSDN_documents/raw/main/miscellaneous/M5/UnitASR/StampISP.jpg)
+
+フラッシングの実行は、[Unit ASR カスタムファームウェアの生成とフラッシング](https://docs.m5stack.com/ja/guide/offline_voice/unit_asr/firmware)の「3. ファームウェアのフラッシング」に書かれている、「フラッシングツールが対応するポートを検出したら、ポートを選択してダウンロードを有効にします。 **その後、Unit ASRを接続し、** プログラムのダウンロードを開始します。」の通りで、ダウンロードのチェックを入れてから [Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)を接続する必要があります。この点、ご注意ください。
+
+### カスタムファームウェア
 
 * [V1.05(May.03, 2025)](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v105.bin)
 
@@ -60,6 +68,7 @@ M5を起動すると、自動で[Tello](https://www.ryzerobotics.com/jp/tello)�
 * [smartpi.cn](https://www.smartpi.cn/)
 * [Unit ASR ファームウェアフラッシングツール](https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/635/CI-03T_Serial_burning_software_V3.7.3.zip)
 * [Stamp ISP](https://docs.m5stack.com/ja/module/StampISP)
+* [Unit ASR カスタムファームウェア](https://github.com/MRSa/GokigenOSDN_documents/tree/main/miscellaneous/M5/UnitASR)
 
 ----
 
