@@ -49,7 +49,7 @@ M5を起動すると、自動で[Tello](https://www.ryzerobotics.com/jp/tello)�
 
 フラッシングの実行は、[Unit ASR ファームウェアフラッシングツール](https://docs.m5stack.com/ja/guide/offline_voice/unit_asr/firmware)の記載、「フラッシングツールが対応するポートを検出したら、ポートを選択してダウンロードを有効にします。 **その後、Unit ASRを接続し、** プログラムのダウンロードを開始します。」の通りで、ダウンロードのチェックを入れてから [Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)を接続する必要があります。ご注意ください。
 
-* [V1.04(Apr.29, 2025)](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v104.bin)
+* [V1.05(May.03, 2025)](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v105.bin)
 
 ----
 
