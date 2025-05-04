@@ -16,6 +16,7 @@ AsyncUDP udpStatus2;
 
 int batteryRemainM5;
 int batteryRemainTello;
+int currentSpeed;
 char commandMessageBuffer[256];
 
 // ==========================================================
@@ -241,6 +242,55 @@ void ccw90Handler()
     sendCommandToTello("ccw 90");
 }
 
+void sendSpeedCommand()
+{
+    char cmd[16];
+    char disp[24];
+    sprintf(disp, "速度 %d", currentSpeed);
+    sprintf(cmd, "speed %d", currentSpeed);
+    displayMessage(disp, TFT_WHITE);
+    sendCommandToTello(cmd);
+}
+
+
+void incSpeedHandler()
+{
+    currentSpeed = currentSpeed + 20;
+    if (currentSpeed > 100)
+    {
+        currentSpeed = 100;
+    }
+    sendSpeedCommand();
+}
+
+void decSpeedHandler()
+{
+    currentSpeed = currentSpeed - 20;
+    if (currentSpeed < 10)
+    {
+        currentSpeed = 10;
+    }
+    sendSpeedCommand();
+}
+
+void maxSpeedHandler()
+{
+    currentSpeed = 100;
+    sendSpeedCommand();
+}
+
+void midSpeedHandler()
+{
+    currentSpeed = 55;
+    sendSpeedCommand();
+}
+
+void minSpeedHandler()
+{
+    currentSpeed = 10;
+    sendSpeedCommand();
+}
+
 void emergencyHandler()
 {
     displayMessage("緊急停止!", TFT_ORANGE);
@@ -282,11 +332,11 @@ void prepareUnitASR()
     asr.addCommandWord(0x30, "ok",receiveHandler);
     asr.addCommandWord(0x31, "hi_ASR",receiveHandler);
     asr.addCommandWord(0x32, "hello",receiveHandler);
-    asr.addCommandWord(0x40, "increase_speed",receiveHandler);
-    asr.addCommandWord(0x41, "decrease_speed",receiveHandler);
-    asr.addCommandWord(0x42, "maximum_speed",receiveHandler);
-    asr.addCommandWord(0x43, "medium_speed",receiveHandler);
-    asr.addCommandWord(0x44, "minimum_speed",receiveHandler);
+    asr.addCommandWord(0x40, "increase_speed",incSpeedHandler);
+    asr.addCommandWord(0x41, "decrease_speed",decSpeedHandler);
+    asr.addCommandWord(0x42, "maximum_speed",maxSpeedHandler);
+    asr.addCommandWord(0x43, "medium_speed",midSpeedHandler);
+    asr.addCommandWord(0x44, "minimum_speed",minSpeedHandler);
     asr.addCommandWord(0x45, "fw_version",receiveHandler);
     asr.addCommandWord(0x46, "out_finished",receiveHandler);
     asr.addCommandWord(0x47, "out_started",receiveHandler);
@@ -323,6 +373,7 @@ void prepareUnitASR()
     asr.addCommandWord(0x67, "movie_end",receiveHandler);
     asr.addCommandWord(0x68, "status",receiveHandler);
     asr.addCommandWord(0x69, "time",receiveHandler);
+    asr.addCommandWord(0x6a, "remain",receiveHandler);
     asr.addCommandWord(0x71, "up 70",up40Handler);
     asr.addCommandWord(0x72, "down 70",down40Handler);
     asr.addCommandWord(0x73, "right 70",right40Handler);
@@ -346,7 +397,12 @@ void prepareUnitASR()
     asr.addCommandWord(0x95, "out_hour",receiveHandler);
     asr.addCommandWord(0x96, "out_second",receiveHandler);
     asr.addCommandWord(0x97, "out_minute",receiveHandler);
+    asr.addCommandWord(0x98, "out_remain",receiveHandler);
     asr.addCommandWord(0x99, "emergency",emergencyHandler);
+    asr.addCommandWord(0x9a, "out_time",receiveHandler);
+    asr.addCommandWord(0x9b, "out_speed",receiveHandler);
+    asr.addCommandWord(0x9c, "out_height",receiveHandler);
+    asr.addCommandWord(0x9d, "out_temp",receiveHandler);
     asr.addCommandWord(0xfe, "announce",receiveHandler);
     asr.addCommandWord(0xff, "hi_m_five",receiveHandler);
 }
@@ -398,6 +454,8 @@ void setup()
 
     batteryRemainM5 = M5.Power.getBatteryLevel();
     batteryRemainTello = -1;
+
+    currentSpeed = 100;
 
     // ----- LED(RED) OFF : for M5StickC Plus
     pinMode(GPIO_NUM_10, OUTPUT);
