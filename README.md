@@ -57,7 +57,7 @@ M5を起動すると、自動で[Tello](https://www.ryzerobotics.com/jp/tello)�
 
 ### カスタムファームウェア
 
-* [V1.05(May.03, 2025)](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v105.bin)
+* [V1.06(May.04, 2025)](https://github.com/MRSa/GokigenOSDN_documents/blob/main/miscellaneous/M5/UnitASR/jx_ci_03t_firmware_v106.bin)
 
 ----
 
@@ -69,6 +69,8 @@ M5を起動すると、自動で[Tello](https://www.ryzerobotics.com/jp/tello)�
 * [Unit ASR ファームウェアフラッシングツール](https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/635/CI-03T_Serial_burning_software_V3.7.3.zip)
 * [Stamp ISP](https://docs.m5stack.com/ja/module/StampISP)
 * [Unit ASR カスタムファームウェア](https://github.com/MRSa/GokigenOSDN_documents/tree/main/miscellaneous/M5/UnitASR)
+* [M5StickC用TF(SD) HAT(Switch Science)](https://ssci.to/9551)
+* [M5StickC用TF(SD) HAT(サポートページ)](https://github.com/rin-ofumi/m5stickc_sd_hat)
 
 ----
 

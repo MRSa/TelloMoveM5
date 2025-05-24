@@ -1,11 +1,15 @@
 //
 //  TelloMoveM5 : Tello control app with Unit ASR.
 //
+#include <SD.h>         // SD Card
+#include <sd_defines.h>
+#include <sd_diskio.h>
 #include <M5Unified.h>  // Arduino / ESP-IDF Library for M5Stack Series
 #include <M5GFX.h>
 #include <unit_asr.hpp> // for Unit ASR
 #include <AsyncUDP.h>
 #include <WiFi.h>
+#include <Wire.h>
 
 //
 //
@@ -13,6 +17,14 @@ ASRUnit asr;
 AsyncUDP udp;
 AsyncUDP udpStatus1;
 AsyncUDP udpStatus2;
+AsyncUDP udpVideoStream;
+
+SPIClass SPI_EXT;
+bool isEnableCard;
+bool isVideoRecording;
+uint64_t cardSize;
+int  fileCount;
+File streamFile;
 
 int batteryRemainM5;
 int batteryRemainTello;
@@ -40,10 +52,10 @@ void displayMessage(char *message, int fontColor = TFT_WHITE)
 
     M5.Lcd.setFont(&fonts::lgfxJapanGothic_24);
 	M5.Lcd.setTextColor(fontColor, TFT_BLACK);
-    M5.Lcd.setCursor(0, 30);
+    M5.Lcd.setCursor(0, 25);
     M5.Display.println(commandMessageBuffer);
 
-    M5.Lcd.setCursor(0, 85);
+    M5.Lcd.setCursor(0, 60);
     char batteryM5[64];
     sprintf(batteryM5, "    電池残量(M5) : %d %%", batteryRemainM5);
     M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
@@ -52,12 +64,32 @@ void displayMessage(char *message, int fontColor = TFT_WHITE)
 
     if (batteryRemainTello > 0)
     {
-        M5.Lcd.setCursor(0, 105);
+        M5.Lcd.setCursor(0, 80);
         sprintf(batteryM5, "    電池残量(Tello): %d %%", batteryRemainTello);
         M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
         M5.Lcd.setTextColor(getFontColor(batteryRemainTello), TFT_BLACK);
         M5.Display.println(batteryM5);
     }
+
+    if (isEnableCard)
+    {
+        char displayStr[48];
+        M5.Lcd.setCursor(20, 110);
+        M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
+        if (isVideoRecording)
+        {
+            sprintf(displayStr, "VIDEO RECORDING (%d.MOV)", fileCount);
+            M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
+
+        }
+        else
+        {
+            sprintf(displayStr, "CARD READY (%dMB)", cardSize);
+            M5.Lcd.setTextColor(TFT_LIGHTGREY, TFT_BLACK);           
+        }
+        M5.Display.println(displayStr);
+    }
+
 }
 
 void receivedStatus1(AsyncUDPPacket& packet)
@@ -94,6 +126,19 @@ void receivedStatus2(AsyncUDPPacket& packet)
     //Serial.write(packet.data(), packet.length());
     //Serial.write("\n");
 }
+
+void receivedVideoStream(AsyncUDPPacket& packet)
+{
+    if ((isVideoRecording)&&(isEnableCard))
+    {
+        // SD Card有効かつビデオ録画中で、SDカードオープン時に受信データをファイル書き込み
+        if (streamFile)
+        {
+            streamFile.write(packet.data(), packet.length());
+        }
+    }
+}
+
 
 void sendCommandToTello(char *command)
 {
@@ -252,7 +297,6 @@ void sendSpeedCommand()
     sendCommandToTello(cmd);
 }
 
-
 void incSpeedHandler()
 {
     currentSpeed = currentSpeed + 20;
@@ -300,6 +344,43 @@ void emergencyHandler()
 void connectedHandler()
 {
     displayMessage("接続!", TFT_ORANGE);
+}
+
+void movieStartHandler()
+{
+    displayMessage("録画開始", TFT_WHITE);
+    sendCommandToTello("streamon");
+    try
+    {
+        // ----- 記録するファイル名称を決める。
+        //       ファイル名： VIDEO??.MOV ??はファイル数のシリアル番号
+        char fileName[32];
+        fileCount++;
+        sprintf(fileName, "VIDEO%d.MOV", fileCount);
+        streamFile = SD.open(fileName, FILE_WRITE);
+        isVideoRecording = true;
+    }
+    catch (...)
+    {
+        Serial.println("Exception...");
+        isVideoRecording = false;
+    }
+}
+
+void movieEndHandler()
+{
+    isVideoRecording = false;
+    displayMessage("録画終了", TFT_WHITE);
+    sendCommandToTello("streamoff");
+    try
+    {
+        streamFile.flush();
+        streamFile.close();
+    }
+    catch (...)
+    {
+        Serial.println("Failed to close video file...");
+    }
 }
 
 void receiveHandler()
@@ -369,8 +450,8 @@ void prepareUnitASR()
     asr.addCommandWord(0x63, "land",landHandler);
     asr.addCommandWord(0x64, "landing",landHandler);
     asr.addCommandWord(0x65, "capture",receiveHandler);
-    asr.addCommandWord(0x66, "movie_start",receiveHandler);
-    asr.addCommandWord(0x67, "movie_end",receiveHandler);
+    asr.addCommandWord(0x66, "movie_start",movieStartHandler);
+    asr.addCommandWord(0x67, "movie_end",movieEndHandler);
     asr.addCommandWord(0x68, "status",receiveHandler);
     asr.addCommandWord(0x69, "time",receiveHandler);
     asr.addCommandWord(0x6a, "remain",receiveHandler);
@@ -413,7 +494,7 @@ void connectToTelloWiFi()
     WiFi.begin(wifi_ssid, wifi_key);
     WiFi.setSleep(false);
     char messageBuffer [256];
-    sprintf(messageBuffer, "接続中: %s", wifi_ssid);
+    sprintf(messageBuffer, "接続中:%s", wifi_ssid);
     displayMessage(messageBuffer, TFT_GREEN);
     while (WiFi.status() != WL_CONNECTED)
     {
@@ -438,20 +519,93 @@ void connectToTelloWiFi()
     {
         udpStatus2.onPacket(receivedStatus2);
     }
+
+    // ------ ビデオストリーム受信
+    if (udpVideoStream.listen(IP_ANY_TYPE, 11111))
+    {
+        udpVideoStream.onPacket(receivedVideoStream);
+    }
+}
+
+void prepareExternalCard()
+{
+    isEnableCard = false;
+    isVideoRecording = false;
+    cardSize = 0;
+
+    //SDカード用SPIポート初期化（SCK:HAT_G0, MISO:HAT_G36, MOSI:HAT_G26, SS:物理ピン無し"-1"）
+    //SPI_EXT.begin(0, 36, 26, -1);
+    SPI_EXT.begin(0, 36, 26, 19);
+
+    //SDカード初期設定 (10回ぐらい再試行してみる)
+    int retryCount = 10;
+    // io19は未使用ピン、"GPIO output gpio_num error" 発声回避のため指定した。
+    //while ((retryCount > 0)&&(false == SD.begin(-1, SPI_EXT, 25000000)))
+    while ((retryCount > 0)&&(false == SD.begin(19, SPI_EXT, 25000000))) 
+    {
+        delay(500);
+        retryCount--;
+    }
+    if (retryCount > 0)
+    {
+        // カード使用可能設定
+        isEnableCard = true;
+
+        // SDカード容量取得 (単位： MB)
+        cardSize = SD.cardSize() / (1024 * 1024);
+
+        Serial.print("SD CARD IS AVAILABLE: ");
+        Serial.print(cardSize);
+        Serial.println(" MB.");
+
+        // --- ここで、現在カードに記録されているファイル数を取得し、fileCountに格納する
+        // (ファイル名の末尾にこのファイルカウントを付与して録画ファイルをだぶらせないようにする)
+        try
+        {
+            fileCount = 0;
+            File root = SD.open("/");
+            while (true)
+            {
+                File entry = root.openNextFile();
+                if (!entry)
+                {
+                    // これ以上ファイルがない場合は抜ける
+                    break;
+                }
+                fileCount++;
+            }
+        }
+        catch (...)
+        {
+            Serial.println("ERR>Failed to get file count.");
+            fileCount++;
+        }
+        // ----- ファイル数を表示
+        Serial.print("File Count: ");
+        Serial.println(fileCount);
+    }
+    else
+    {
+        Serial.println("SD CARD IS NONE.");
+    }
 }
 
 void setup()
 {
     auto cfg = M5.config();
     cfg.serial_baudrate = 115200;
+    cfg.pmic_button = false;  // 電源ボタンはOFFにする 
     cfg.output_power = true;
     cfg.clear_display = true;
     cfg.led_brightness = 96;
 
     M5.begin(cfg);
 
-    M5.Power.begin(); 
+    // ----- HATピンを落としてみる
+    Wire1.end();
+    delay(100);
 
+    M5.Power.begin(); 
     batteryRemainM5 = M5.Power.getBatteryLevel();
     batteryRemainTello = -1;
 
@@ -463,6 +617,11 @@ void setup()
 
     // ----- 画面表示の初期化
     prepareScreen();
+    
+    // ----- 外部メモリ(SDカード)の初期化
+    Serial.println("");
+    Serial.println("- - - - - - -");
+    prepareExternalCard();
 
     // ----- Unit ASRの初期化
     prepareUnitASR();
