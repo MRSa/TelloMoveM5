@@ -1,9 +1,9 @@
 //
 //  TelloMoveM5 : Tello control app with Unit ASR.
 //
+#include <Arduino.h>
+#include <SPI.h>
 #include <SD.h>         // SD Card
-#include <sd_defines.h>
-#include <sd_diskio.h>
 #include <M5Unified.h>  // Arduino / ESP-IDF Library for M5Stack Series
 #include <M5GFX.h>
 #include <unit_asr.hpp> // for Unit ASR
@@ -19,7 +19,6 @@ AsyncUDP udpStatus1;
 AsyncUDP udpStatus2;
 AsyncUDP udpVideoStream;
 
-SPIClass SPI_EXT;
 bool isEnableCard;
 bool isVideoRecording;
 uint64_t cardSize;
@@ -30,6 +29,13 @@ int batteryRemainM5;
 int batteryRemainTello;
 int currentSpeed;
 char commandMessageBuffer[256];
+
+// ----- SD Card
+enum { spi_sck = 0, spi_miso = 36, spi_mosi = 26, spi_ss = -1 };
+#define HSPI_CLK 1500000
+SPIClass SPI_EXT = SPIClass(HSPI);
+
+m5::board_t boardType;
 
 // ==========================================================
 //  Enter your Tello's Wi-Fi credentials  in 'wifi_creds.h'.
@@ -138,7 +144,6 @@ void receivedVideoStream(AsyncUDPPacket& packet)
         }
     }
 }
-
 
 void sendCommandToTello(char *command)
 {
@@ -357,7 +362,7 @@ void movieStartHandler()
         char fileName[32];
         fileCount++;
         sprintf(fileName, "VIDEO%d.MOV", fileCount);
-        streamFile = SD.open(fileName, FILE_WRITE);
+        streamFile = SD.open(fileName, FILE_APPEND);
         isVideoRecording = true;
     }
     catch (...)
@@ -389,6 +394,63 @@ void receiveHandler()
     M5.Display.setCursor(0, 0);
     M5.Lcd.fillScreen(TFT_BLACK);
     M5.Display.println("(命令受信)");
+}
+
+void checkBoardType()
+{
+    try
+    {
+      boardType = M5.getBoard();
+      const char* name;
+      switch (boardType) {
+        case m5::board_t::board_M5Stack:        name = "Stack";       break;
+        case m5::board_t::board_M5StackCore2:   name = "StackCore2";  break;
+        case m5::board_t::board_M5StickC:       name = "StickC";      break;
+        case m5::board_t::board_M5StickCPlus:   name = "StickCPlus";  break;
+        case m5::board_t::board_M5StickCPlus2:  name = "StickCPlus2"; break;
+        case m5::board_t::board_M5StackCoreInk: name = "CoreInk";     break;
+        case m5::board_t::board_M5Paper:        name = "Paper";       break;
+        case m5::board_t::board_M5Tough:        name = "Tough";       break;
+        case m5::board_t::board_M5Station:      name = "Station";     break;
+        case m5::board_t::board_M5StackCoreS3:  name = "StackS3";     break;
+        case m5::board_t::board_M5AtomS3:       name = "ATOMS3";      break;
+        case m5::board_t::board_M5Dial:         name = "DIAL";        break;
+        case m5::board_t::board_M5DinMeter:     name = "DinMeter";    break;
+        case m5::board_t::board_M5Cardputer:    name = "Cardputer";   break;
+        case m5::board_t::board_M5AirQ:         name = "AirQ";        break;
+        case m5::board_t::board_M5VAMeter:      name = "VAMeter";     break;
+        case m5::board_t::board_M5StackCoreS3SE: name = "StackS3SE";  break;
+        case m5::board_t::board_M5AtomS3R:      name = "ATOMS3R";     break;
+        case m5::board_t::board_M5PaperS3:      name = "PaperS3";     break;
+        case m5::board_t::board_M5CoreMP135:    name = "MP135";       break;
+        case m5::board_t::board_M5StampPLC:     name = "StampPLC";    break;
+        case m5::board_t::board_M5Tab5:         name = "Tab5";        break;
+        case m5::board_t::board_M5Atom:         name = "ATOM";        break;
+        case m5::board_t::board_M5AtomPsram:    name = "ATOM PSRAM";  break;
+        case m5::board_t::board_M5AtomU:        name = "ATOM U";      break;
+        case m5::board_t::board_M5Camera:       name = "Camera";      break;
+        case m5::board_t::board_M5TimerCam:     name = "TimerCamera"; break;
+        case m5::board_t::board_M5StampPico:    name = "StampPico";   break;
+        case m5::board_t::board_M5StampC3:      name = "StampC3";     break;
+        case m5::board_t::board_M5StampC3U:     name = "StampC3U";    break;
+        case m5::board_t::board_M5StampS3:      name = "StampS3";     break;
+        case m5::board_t::board_M5AtomS3Lite:   name = "ATOMS3Lite";  break;        
+        case m5::board_t::board_M5AtomS3U:      name = "AtomS3U";     break;
+        case m5::board_t::board_M5Capsule:      name = "Capsule";     break;
+        case m5::board_t::board_M5NanoC6:       name = "NanoC6";      break;
+        case m5::board_t::board_M5AtomMatrix:   name = "AtomMatrix";  break;
+        case m5::board_t::board_M5AtomEcho:     name = "AtomEcho";    break;
+        case m5::board_t::board_M5AtomS3RExt:   name = "AtomS3RExt";  break;
+        case m5::board_t::board_M5AtomS3RCam:   name = "AtomS3RCam";  break;
+        default:                                name = "UNKNOWN";     break;
+      }
+      Serial.print("BOARD TYPE: ");
+      Serial.println(name);
+    }
+    catch (...)
+    {
+        Serial.println("Failed to get board type.");
+    }
 }
 
 void prepareUnitASR()
@@ -533,17 +595,16 @@ void prepareExternalCard()
     isVideoRecording = false;
     cardSize = 0;
 
-    //SDカード用SPIポート初期化（SCK:HAT_G0, MISO:HAT_G36, MOSI:HAT_G26, SS:物理ピン無し"-1"）
-    //SPI_EXT.begin(0, 36, 26, -1);
-    SPI_EXT.begin(0, 36, 26, 19);
+    // ----- SDカード用SPIポート初期化（SCK:HAT_G0, MISO:HAT_G36, MOSI:HAT_G26, SS:物理ピン無し"-1"）
+    SPI_EXT.end();
+    delay(100);
+    SPI_EXT.begin(spi_sck, spi_miso, spi_mosi, spi_ss);
 
-    //SDカード初期設定 (10回ぐらい再試行してみる)
-    int retryCount = 10;
-    // io19は未使用ピン、"GPIO output gpio_num error" 発声回避のため指定した。
-    //while ((retryCount > 0)&&(false == SD.begin(-1, SPI_EXT, 25000000)))
-    while ((retryCount > 0)&&(false == SD.begin(19, SPI_EXT, 25000000))) 
+    // ----- SDカード初期設定 (3回ぐらい retry してみる)
+    int retryCount = 3;
+    while ((retryCount > 0)&&(false == SD.begin(spi_ss, SPI_EXT, HSPI_CLK)))
     {
-        delay(500);
+        delay(100);
         retryCount--;
     }
     if (retryCount > 0)
@@ -554,9 +615,9 @@ void prepareExternalCard()
         // SDカード容量取得 (単位： MB)
         cardSize = SD.cardSize() / (1024 * 1024);
 
-        Serial.print("SD CARD IS AVAILABLE: ");
-        Serial.print(cardSize);
-        Serial.println(" MB.");
+        char message[64];
+        sprintf(message, "SD CARD: %d MB.");
+        Serial.println(message);
 
         // --- ここで、現在カードに記録されているファイル数を取得し、fileCountに格納する
         // (ファイル名の末尾にこのファイルカウントを付与して録画ファイルをだぶらせないようにする)
@@ -580,7 +641,7 @@ void prepareExternalCard()
             Serial.println("ERR>Failed to get file count.");
             fileCount++;
         }
-        // ----- ファイル数を表示
+        // ----- ファイル数を出力
         Serial.print("File Count: ");
         Serial.println(fileCount);
     }
@@ -594,16 +655,16 @@ void setup()
 {
     auto cfg = M5.config();
     cfg.serial_baudrate = 115200;
-    cfg.pmic_button = false;  // 電源ボタンはOFFにする 
+    cfg.pmic_button = false;
     cfg.output_power = true;
     cfg.clear_display = true;
     cfg.led_brightness = 96;
-
     M5.begin(cfg);
 
-    // ----- HATピンを落としてみる
-    Wire1.end();
-    delay(100);
+    // --- ピンモードを設定
+    // pinMode(36, INPUT);
+    gpio_pulldown_dis(GPIO_NUM_25);
+    gpio_pullup_dis(GPIO_NUM_25);
 
     M5.Power.begin(); 
     batteryRemainM5 = M5.Power.getBatteryLevel();
@@ -617,11 +678,21 @@ void setup()
 
     // ----- 画面表示の初期化
     prepareScreen();
-    
-    // ----- 外部メモリ(SDカード)の初期化
+
+    // ----- 開始のログ出力
+    Serial.println("");
+    Serial.println("TelloMoveM5 : START!");
     Serial.println("");
     Serial.println("- - - - - - -");
+    Serial.println("");
+
+    // ----- 外部メモリ(SDカード)の初期化
     prepareExternalCard();
+
+    // ----- ボードタイプを確認する
+    Serial.println("");
+    checkBoardType();
+    Serial.println("");
 
     // ----- Unit ASRの初期化
     prepareUnitASR();
@@ -661,9 +732,11 @@ void loop()
     }
 
     if (M5.BtnA.wasPressed()) {
-        // ----- Main Button
+        // ----- Main Button（このボタンも緊急停止ボタンとする）
+        displayMessage("EMERGENCY (Btn A)");
+        asr.sendComandNum(0x99);
+        emergencyHandler();
         asr.printCommandList();
-        displayMessage("Pushed Btn A");
     } else if (M5.BtnB.wasPressed()) {
         // ----- Side Button (SEND "Emergency OFF" Command)
         displayMessage("EMERGENCY (Btn B)");
