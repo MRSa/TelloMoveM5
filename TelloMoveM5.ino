@@ -22,25 +22,27 @@ AsyncUDP udpVideoStream;
 int batteryRemainM5;
 int batteryRemainTello;
 int currentSpeed;
-char commandMessageBuffer[256];
 
 // ----- for SD Card
 bool isEnableCard;
 bool isVideoRecording;
 bool isFileOpenError;
+bool showErrorMessage;
 File streamFile;
 uint64_t cardSize;
 
-#define MAX_STREAM_BUFFER 16
+#define MAX_STREAM_BUFFER 36
 #define STREAM_BUFFER_SIZE 2048  //  > 1460(bytes.)
 int currentBufferIndex;
+int readBufferIndex;
+uint64_t writeDataSize = 0;
 byte streamBuffer[MAX_STREAM_BUFFER][STREAM_BUFFER_SIZE];
 int streamBufferSize[MAX_STREAM_BUFFER];
-bool bufferCopied;
 
 enum { spi_sck = 0, spi_miso = 36, spi_mosi = 26, spi_ss = -1 };
 //#define HSPI_CLK 1500000
-#define HSPI_CLK 4000000
+#define HSPI_CLK 2500000
+//#define HSPI_CLK 4000000
 SPIClass SPI_EXT = SPIClass(HSPI);
 
 m5::board_t boardType;
@@ -54,33 +56,30 @@ m5::board_t boardType;
 
 void displayMessage(char *message, int fontColor = TFT_WHITE)
 {
-    if (strlen(message) > 0)
-    {
-        strncpy(commandMessageBuffer, message, 255);
-    }
     M5.Lcd.fillScreen(TFT_BLACK);
 	M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-    M5.Lcd.setCursor(0, 0);
+    M5.Lcd.setCursor(5, 0);
     M5.Lcd.setFont(&fonts::efontJA_24_b);
     M5.Lcd.print("TelloMoveM5\n\n");
 
-    M5.Lcd.setFont(&fonts::lgfxJapanGothic_24);
+    //M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
+    M5.Lcd.setFont(&fonts::efontJA_24);
 	M5.Lcd.setTextColor(fontColor, TFT_BLACK);
-    M5.Lcd.setCursor(0, 25);
-    M5.Display.println(commandMessageBuffer);
+    M5.Lcd.setCursor(5, 30);
+    M5.Display.println(message);
 
-    M5.Lcd.setCursor(0, 60);
+    M5.Lcd.setCursor(0, 70);
     char batteryM5[64];
-    sprintf(batteryM5, "    電池残量(M5) : %d %%", batteryRemainM5);
-    M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
+    sprintf(batteryM5, "    Batt.(M5)    : %d %%", batteryRemainM5);
+    M5.Lcd.setFont(&fonts::efontJA_16);
     M5.Lcd.setTextColor(getFontColor(batteryRemainM5), TFT_BLACK);
     M5.Display.println(batteryM5);
 
     if (batteryRemainTello > 0)
     {
-        M5.Lcd.setCursor(0, 80);
-        sprintf(batteryM5, "    電池残量(Tello): %d %%", batteryRemainTello);
-        M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
+        M5.Lcd.setCursor(0, 90);
+        sprintf(batteryM5, "    Batt.(Tello) : %d %%", batteryRemainTello);
+        M5.Lcd.setFont(&fonts::efontJA_16);
         M5.Lcd.setTextColor(getFontColor(batteryRemainTello), TFT_BLACK);
         M5.Display.println(batteryM5);
     }
@@ -89,7 +88,7 @@ void displayMessage(char *message, int fontColor = TFT_WHITE)
     {
         char displayStr[48];
         M5.Lcd.setCursor(20, 110);
-        M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
+        M5.Lcd.setFont(&fonts::efontJA_16);
         if (isFileOpenError)
         {
             sprintf(displayStr, "OPEN ERROR : VIDEO%02d.MOV", 0);
@@ -146,13 +145,21 @@ void receivedVideoStream(AsyncUDPPacket& packet)
 {
     if ((currentBufferIndex > 0)&&(currentBufferIndex <= MAX_STREAM_BUFFER))
     {
-        memcpy(streamBuffer[currentBufferIndex - 1], packet.data(), packet.length());
-        streamBufferSize[currentBufferIndex - 1] = packet.length();
-        if (currentBufferIndex <= MAX_STREAM_BUFFER)
+        int dataSize = packet.length();
+        if (dataSize > STREAM_BUFFER_SIZE)
+        {
+            dataSize = STREAM_BUFFER_SIZE;
+        }
+        memcpy(streamBuffer[currentBufferIndex - 1], packet.data(), dataSize);
+        streamBufferSize[currentBufferIndex - 1] = dataSize;
+        if (currentBufferIndex == MAX_STREAM_BUFFER)
+        {
+            currentBufferIndex = 1;
+        }
+        else
         {
             currentBufferIndex++;
         }
-        bufferCopied = true;
     }
 /*
     //char messageBuffer[48];
@@ -377,73 +384,20 @@ void connectedHandler()
     displayMessage("接続!", TFT_ORANGE);
 }
 
-void openStreamFile()
-{
-    try
-    {
-        //SDカードのルートディレクトリを開く。
-        SDFile dir = SDFileSystem.open("/");
-        if (!dir)
-        {
-            Serial.println("ROOT DIR OPEN FAILURE....");
-
-            // ----- ファイルをオープンする (ファイル名： VIDEO00.MOV)
-            streamFile = SDFileSystem.open("/VIDEO00.MOV", FILE_APPEND);
-        }
-        else
-        {
-            // ----- ファイルをオープンする (ファイル名： VIDEO00.MOV)
-            streamFile = SDFileSystem.open("/VIDEO00.MOV", FILE_APPEND);
-        }
-        if (streamFile)
-        {
-            Serial.println("FILE OPEN SUCCESS!");
-            isFileOpenError = false;
-        }
-        else
-        {
-            Serial.println("FILE OPEN FAILURE....");
-            isFileOpenError = true;
-        }
-    }
-    catch (...)
-    {
-        Serial.println("Exception...");
-        isVideoRecording = false;
-        isFileOpenError = true;
-    }
-}
-
-void closeStreamFile()
-{
-    try
-    {
-        if (streamFile)
-        {
-            streamFile.flush();
-            streamFile.close();
-        }
-    }
-    catch (...)
-    {
-        Serial.println("Failed to close video file...");
-    }
-    isFileOpenError = false;
-}
-
 void movieStartHandler()
 {
     isVideoRecording = true;
+    isFileOpenError = false;
+    showErrorMessage = false;
+    writeDataSize = 0;
 
     // 受信バッファの初期化
     currentBufferIndex = 1;
-    bufferCopied = false;
     for (int i = 0; i < MAX_STREAM_BUFFER; i++)
     {
         streamBufferSize[i] = 0;
     }
-
-    //openStreamFile();
+    readBufferIndex = 1;
     sendCommandToTello("streamon");
     displayMessage("録画開始", TFT_WHITE);
 }
@@ -451,15 +405,22 @@ void movieStartHandler()
 void movieEndHandler()
 {
     isVideoRecording = false;
+    isFileOpenError = false;
+    showErrorMessage = false;
+
+    // 受信バッファのクリア
     currentBufferIndex = 0;
+    readBufferIndex = 0;
     for (int i = 0; i < MAX_STREAM_BUFFER; i++)
     {
         streamBufferSize[i] = 0;
     }
-    bufferCopied = false;
     sendCommandToTello("streamoff");
-    //closeStreamFile();
     displayMessage("録画終了", TFT_WHITE);
+
+    Serial.print("Total Write Bytes: ");
+    Serial.println(writeDataSize);
+    writeDataSize = 0;
 }
 
 void receiveHandler()
@@ -631,15 +592,18 @@ void connectToTelloWiFi()
     // ------ Tello へ Wi-Fi接続
     WiFi.begin(wifi_ssid, wifi_key);
     WiFi.setSleep(false);
-    char messageBuffer [256];
+
+    char messageBuffer [64];
     sprintf(messageBuffer, "接続中:%s", wifi_ssid);
     displayMessage(messageBuffer, TFT_GREEN);
+
     while (WiFi.status() != WL_CONNECTED)
     {
       delay(550);
       Serial.print(".");
     }
     Serial.println("");
+
     if (WiFi.status() == WL_CONNECTED)
     {
       Serial.println("WiFi connected.");
@@ -699,23 +663,88 @@ void prepareExternalCard()
     {
         Serial.println("SD CARD IS NONE.");
     }
-    
-    //SDカードのルートディレクトリを開く。
-    SDFile dir = SDFileSystem.open("/");
-    
-    //SDカード内のディレクトリ・ファイル名を表示
-    Serial.println("- - - - -");
-    while (1)
+}
+
+void checkDirectoryFileList()
+{
+    try
     {
-        SDFile entry =  dir.openNextFile();
-        if (!entry)
+        //SDカードのルートディレクトリを開く。
+        SDFile dir = SDFileSystem.open("/");
+        if (!dir)
         {
-            break;
+            Serial.println(" *** DIR OPEN ERROR ***");
         }
-        Serial.println(entry.name());
-        entry.close();
+        
+        //SDカード内のディレクトリ・ファイル名を表示
+        Serial.println("- - - - -");
+        while (1)
+        {
+            SDFile entry =  dir.openNextFile();
+            if (!entry)
+            {
+                break;
+            }
+            Serial.println(entry.name());
+            entry.close();
+        }
+        Serial.println("- - - - -");
     }
-    Serial.println("- - - - -");
+    catch (...)
+    {
+        Serial.println("Exception...");
+    }
+}
+
+void writeStreamData()
+{
+    try
+    {
+        // ----- ファイルをオープンする (ファイル名： VIDEO00.MOV)
+        File videoFile = SDFileSystem.open("/VIDEO00.MOV", FILE_APPEND);
+        if (videoFile)
+        {
+            isFileOpenError = false;
+            int index = readBufferIndex;
+            if ((index > 0)&&(streamBufferSize[index - 1] > 0))
+            {
+                int dataSize = streamBufferSize[index - 1];
+                videoFile.write(streamBuffer[index - 1], dataSize);
+                videoFile.close();
+                if (readBufferIndex == MAX_STREAM_BUFFER)
+                {
+                    readBufferIndex = 1;
+                }
+                else
+                {
+                    readBufferIndex++;
+                }
+                writeDataSize = writeDataSize + dataSize;
+
+                // ------ 書き込みデータのログ出力
+                //char message[64];
+                //sprintf(message, "WRITE DATA: %d bytes. [%d]", dataSize, index);
+                //Serial.println(message);
+            }
+        }
+        else
+        {
+            if (!showErrorMessage)
+            {
+                char msg[96];
+                sprintf(msg, " rIdx:%d cIdx:%d size:%lld", readBufferIndex, currentBufferIndex, writeDataSize);
+                Serial.print("FILE OPEN Failure...");
+                Serial.println(msg);
+            }
+            isFileOpenError = true;
+            showErrorMessage = true;
+        }
+    }
+    catch (...)
+    {
+        Serial.println("FILE WRITE Exception...");
+        isFileOpenError = true;
+    }
 }
 
 void setup()
@@ -728,18 +757,20 @@ void setup()
     cfg.led_brightness = 96;
     M5.begin(cfg);
 
+    // --- ピンモードを設定
+    gpio_pulldown_dis(GPIO_NUM_25);
+    gpio_pullup_dis(GPIO_NUM_25);
+
     // --- M5のバッテリ残量を取得する
     M5.Power.begin(); 
     batteryRemainM5 = M5.Power.getBatteryLevel();
     batteryRemainTello = -1;
 
-    // --- ピンモードを設定
-    gpio_pulldown_dis(GPIO_NUM_25);
-    gpio_pullup_dis(GPIO_NUM_25);
-
+    showErrorMessage = false;
     isFileOpenError = false;
     currentBufferIndex = 0;
-    bufferCopied = false;
+    readBufferIndex = 0;
+    writeDataSize = 0;
     currentSpeed = 100;
 
     for (int i = 0; i < MAX_STREAM_BUFFER; i++)
@@ -756,7 +787,7 @@ void setup()
 
     // ----- 開始のログ出力
     Serial.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-");
-    Serial.println("TelloMoveM5 : START!");
+    Serial.println("  TelloMoveM5 : START!");
     Serial.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-");
 
     // ----- ボードタイプを表示
@@ -769,6 +800,9 @@ void setup()
 
     // ----- 外部メモリ(SDカード)の初期化
     prepareExternalCard();
+
+    // SDカードのディレクトリ一覧を取得
+    //checkDirectoryFileList();
 
     // ----- TelloとのWi-Fi接続
     connectToTelloWiFi();
@@ -807,48 +841,8 @@ void setup()
     }
 }
 
-void writeStreamData()
-{
-    try
-    {
-        // ----- ファイルをオープンする (ファイル名： VIDEO00.MOV)
-        File videoFile = SDFileSystem.open("/VIDEO00.MOV", FILE_APPEND);
-        if (videoFile)
-        {
-            isFileOpenError = false;
-            int index = currentBufferIndex;
-            if ((index > 0)&&(streamBufferSize[index - 1] > 0))
-            {
-                int dataSize = streamBufferSize[index - 1];
-                videoFile.write(streamBuffer[index - 1], dataSize);
-                if (currentBufferIndex > 1)
-                {
-                    currentBufferIndex--;
-                }
-                videoFile.close();
-
-                // ------ 書き込みデータのログ出力
-                char message[64];
-                sprintf(message, "WRITE[%d]: %d bytes.", index, dataSize);
-                Serial.println(message);
-            }
-        }
-        else
-        {
-            Serial.println("FILE OPEN Failure...");
-            isFileOpenError = true;
-        }
-    }
-    catch (...)
-    {
-        Serial.println("FILE WRITE Exception...");
-        isFileOpenError = true;
-    }
-}
-
 void loop()
 {
-    M5.update();
     if (asr.update()) {
         Serial.println("----------");
         Serial.println(asr.getCurrentCommandWord());
@@ -857,6 +851,7 @@ void loop()
         Serial.println((asr.checkCurrentCommandHandler()));
     }
 
+    M5.update();
     if (M5.BtnA.wasPressed()) {
         // ----- Main Button（このボタンも緊急停止ボタンとする）
         displayMessage("EMERGENCY (Btn A)");
