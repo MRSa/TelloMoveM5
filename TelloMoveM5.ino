@@ -31,17 +31,21 @@ bool showErrorMessage;
 File streamFile;
 uint64_t cardSize;
 
-#define MAX_STREAM_BUFFER 36
-#define STREAM_BUFFER_SIZE 2048  //  > 1460(bytes.)
+#define MAX_STREAM_BUFFER 46
+#define STREAM_BUFFER_SIZE 1600  //  > 1460(bytes.)
 int currentBufferIndex;
 int readBufferIndex;
 uint64_t writeDataSize = 0;
+uint64_t writeBlocks = 0;
 byte streamBuffer[MAX_STREAM_BUFFER][STREAM_BUFFER_SIZE];
 int streamBufferSize[MAX_STREAM_BUFFER];
 
 enum { spi_sck = 0, spi_miso = 36, spi_mosi = 26, spi_ss = -1 };
 //#define HSPI_CLK 1500000
-#define HSPI_CLK 2500000
+//#define HSPI_CLK 2000000
+//#define HSPI_CLK 2500000
+//#define HSPI_CLK 3000000
+#define HSPI_CLK 3500000
 //#define HSPI_CLK 4000000
 SPIClass SPI_EXT = SPIClass(HSPI);
 
@@ -419,17 +423,17 @@ void movieEndHandler()
     displayMessage("録画終了", TFT_WHITE);
 
     Serial.print("Total Write Bytes: ");
-    Serial.println(writeDataSize);
+    Serial.print(writeDataSize);
+    Serial.print("  Write count: ");
+    Serial.println(writeBlocks);
     writeDataSize = 0;
+    writeBlocks = 0;
 }
 
 void receiveHandler()
 {
-    Serial.println("A command received!");
-    M5.Display.setCursor(0, 0);
-    M5.Lcd.fillScreen(TFT_BLACK);
-    M5.Lcd.setTextColor(TFT_LIGHTGREY, TFT_BLACK);
-    M5.Display.println("(命令受信)");
+    Serial.println("Not support command received!");
+    displayMessage("(命令受信)", TFT_LIGHTGREY);
 }
 
 void checkBoardType()
@@ -720,6 +724,7 @@ void writeStreamData()
                     readBufferIndex++;
                 }
                 writeDataSize = writeDataSize + dataSize;
+                writeBlocks = writeBlocks + 1;
 
                 // ------ 書き込みデータのログ出力
                 //char message[64];
@@ -732,7 +737,7 @@ void writeStreamData()
             if (!showErrorMessage)
             {
                 char msg[96];
-                sprintf(msg, " rIdx:%d cIdx:%d size:%lld", readBufferIndex, currentBufferIndex, writeDataSize);
+                sprintf(msg, " rIdx:%d cIdx:%d size:%lld cnt:%lld", readBufferIndex, currentBufferIndex, writeDataSize, writeBlocks);
                 Serial.print("FILE OPEN Failure...");
                 Serial.println(msg);
             }
@@ -771,6 +776,7 @@ void setup()
     currentBufferIndex = 0;
     readBufferIndex = 0;
     writeDataSize = 0;
+    writeBlocks = 0;
     currentSpeed = 100;
 
     for (int i = 0; i < MAX_STREAM_BUFFER; i++)
