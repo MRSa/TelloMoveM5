@@ -5,6 +5,11 @@ TelloMoveM5は、[Tello](https://www.ryzerobotics.com/jp/tello)を [M5StickC Plu
 
 ![TelloMoveM5イメージ](https://github.com/MRSa/TelloMoveM5/blob/main/images/TelloMoveM5.jpg?raw=true)
 
+また、[M5StickC用TF(SD) HAT](https://www.switch-science.com/collections/m5stack/products/9551)を接続したとき、動画を録画することもできます。
+ただし、カードに記録された動画ファイルは直接参照はできず、ファイルをPCに転送し、ffmpegでMP4ファイルに変換する必要があります。また動画はきちんと撮れるわけではなく、あくまでもコンセプト実証程度の実装であることをご承知おきください。
+
+![TF(SD) HAT装着＆動画撮影](https://github.com/MRSa/TelloMoveM5/blob/main/images/StickC_wTF.jpg?raw=true)
+
 ## システム構成
 
 ![システム構成](https://github.com/MRSa/TelloMoveM5/blob/main/images/TelloMoveM5_system.png?raw=true)
@@ -54,6 +59,20 @@ M5を起動すると、自動で[Tello](https://www.ryzerobotics.com/jp/tello)�
 ![M5 StampISPとの接続](https://github.com/MRSa/GokigenOSDN_documents/raw/main/miscellaneous/M5/UnitASR/StampISP.jpg)
 
 フラッシングの実行は、[Unit ASR カスタムファームウェアの生成とフラッシング](https://docs.m5stack.com/ja/guide/offline_voice/unit_asr/firmware)の「3. ファームウェアのフラッシング」に書かれている、「フラッシングツールが対応するポートを検出したら、ポートを選択してダウンロードを有効にします。 **その後、Unit ASRを接続し、** プログラムのダウンロードを開始します。」の通りで、ダウンロードのチェックを入れてから [Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)を接続する必要があります。この点、ご注意ください。
+
+## 動画の撮影
+
+[M5StickC用TF(SD) HAT](https://www.switch-science.com/collections/m5stack/products/9551)を接続し、動画を録画することができます。
+**ろくがかいし**で動画の記録を開始し、**ろくがしゅうりょう**で動画の記録を停止します。
+記録する動画ファイル名は VIDEO00.MOV で、追記モードで記録します。
+
+なお、記録した動画ファイルは、そのまま再生はできません。ファイルをPCに転送し、[ffmpeg](https://ffmpeg.org/)を使用して MP4ファイル等に変換してご視聴ください。ffmpegを使用して変換する時のコマンドは、以下をお試しください。
+
+```bash
+    ffmpeg -i VIDEO00.MOV  (変換後ファイル名)
+```
+
+なお、動画はUDP転送ということもあり、あまり品質が高くないようです。あらかじめご承知おきください。
 
 ### カスタムファームウェア
 
