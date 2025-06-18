@@ -21,9 +21,7 @@ jobs:
           arduino-cli core update-index
           arduino-cli core install m5stack:esp32
           arduino-cli lib update-index
-          arduino-cli lib install FastLED
           arduino-cli lib install WiFi
-          arduino-cli lib install Stepper
           arduino-cli lib install M5Unified
           arduino-cli lib install M5UnitASR
       - name: Compile Sketch
