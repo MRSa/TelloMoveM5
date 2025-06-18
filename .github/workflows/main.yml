@@ -1,0 +1,30 @@
+name: Arduino CI
+on: [push, pull_request]
+jobs:
+  compile-sketch:
+    strategy:
+      matrix:
+        arduino-platform: ["esp32:m5stack_stickc"]
+        include:
+          - arduino-platform: "esp32:m5stack_stickc"
+            fqbn: "m5stack:esp32:m5stack_stickc"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Arduino CLI
+        uses: arduino/setup-arduino-cli@v2
+      - name: Install platform and librafies
+        run: |
+          arduino-cli config set network.connection_timeout 600s
+          arduino-cli config add board_manager.additional_urls https://static-cdn.m5stack.com/resource/arduino/package_m5stack_index.json
+          arduino-cli core update-index
+          arduino-cli core install m5stack
+          arduino-cli lib update-index
+          arduino-cli lib install FastLED
+          arduino-cli lib install WiFi
+          arduino-cli lib install Stepper
+          arduino-cli lib install M5Unified
+          arduino-cli lib install M5UnitASR
+      - name: Compile Sketch
+        run: arduino-cli compile --fqbn ${{ matrix.fqbn }}
