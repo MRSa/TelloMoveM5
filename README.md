@@ -56,6 +56,8 @@ M5を起動すると、自動で[Tello](https://www.ryzerobotics.com/jp/tello)�
 
 ファームウェアのフラッシングには、[Stamp ISP](https://docs.m5stack.com/ja/module/StampISP)を使用しました。（Groveケーブルを、 RXD, TXD, 5VIN, GND に接続します。）
 
+[CH9102F USBシリアル変換モジュールキット Type-C](https://akizukidenshi.com/catalog/g/g129505/) でも書き込みができました。こちらは5Vのピンが出ているので配線は楽です。
+
 ![M5 StampISPとの接続](https://github.com/MRSa/GokigenOSDN_documents/raw/main/miscellaneous/M5/UnitASR/StampISP.jpg)
 
 フラッシングの実行は、[Unit ASR カスタムファームウェアの生成とフラッシング](https://docs.m5stack.com/ja/guide/offline_voice/unit_asr/firmware)の「3. ファームウェアのフラッシング」に書かれている、「フラッシングツールが対応するポートを検出したら、ポートを選択してダウンロードを有効にします。 **その後、Unit ASRを接続し、** プログラムのダウンロードを開始します。」の通りで、ダウンロードのチェックを入れてから [Unit ASR](https://docs.m5stack.com/ja/unit/Unit%20ASR)を接続する必要があります。この点、ご注意ください。
