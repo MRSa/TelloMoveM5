@@ -19,7 +19,7 @@ jobs:
           arduino-cli config set network.connection_timeout 600s
           arduino-cli config add board_manager.additional_urls https://static-cdn.m5stack.com/resource/arduino/package_m5stack_index.json
           arduino-cli core update-index
-          arduino-cli core install m5stack
+          arduino-cli core install m5stack:esp32
           arduino-cli lib update-index
           arduino-cli lib install FastLED
           arduino-cli lib install WiFi
