@@ -4,16 +4,17 @@ jobs:
   compile-sketch:
     strategy:
       matrix:
-        arduino-platform: ["esp32:m5stack_stickc_plus", "esp32:m5stack_stickc_plus2", "esp32:m5stack_atom", "esp32:m5stack_atoms3"]
+        #arduino-platform: ["esp32:m5stack_stickc_plus", "esp32:m5stack_stickc_plus2", "esp32:m5stack_atom", "esp32:m5stack_atoms3"]
+        arduino-platform: ["esp32:m5stack_stickc_plus", "esp32:m5stack_stickc_plus2"]
         include:
           - arduino-platform: "esp32:m5stack_stickc_plus"
             fqbn: "m5stack:esp32:m5stack_stickc_plus"
           - arduino-platform: "esp32:m5stack_stickc_plus2"
             fqbn: "m5stack:esp32:m5stack_stickc_plus2"
-          - arduino-platform: "esp32:m5stack_atom"
-            fqbn: "m5stack:esp32:m5stack_atom"
-          - arduino-platform: "esp32:m5stack_atoms3"
-            fqbn: "m5stack:esp32:m5stack_atoms3"
+          #- arduino-platform: "esp32:m5stack_atom"
+          #  fqbn: "m5stack:esp32:m5stack_atom"
+          #- arduino-platform: "esp32:m5stack_atoms3"
+          #  fqbn: "m5stack:esp32:m5stack_atoms3"
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
