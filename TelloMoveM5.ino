@@ -37,7 +37,7 @@ File streamFile;
 uint64_t cardSize;
 
 #if defined(ARDUINO_M5STACK_ATOM)
-    #define MAX_STREAM_BUFFER 46
+    #define MAX_STREAM_BUFFER 45
     #define STREAM_BUFFER_SIZE 1600  //  > 1460(bytes.)
 #else
     #define MAX_STREAM_BUFFER 46
