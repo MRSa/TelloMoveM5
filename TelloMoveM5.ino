@@ -813,9 +813,15 @@ void setup()
     cfg.led_brightness = 96;
     M5.begin(cfg);
 
-#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+#if defined(ARDUINO_M5STACK_ATOM)
     // ----- RGB LED OFF : for M5 Atom
     FastLED.addLeds<NEOPIXEL, 27>(&mainLED, 1);
+#elif defined(ARDUINO_M5STACK_ATOMS3)
+    // ----- RGB LED OFF : for M5 Atom
+    FastLED.addLeds<NEOPIXEL, 35>(&mainLED, 1);
+#endif
+
+#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
     FastLED.setBrightness(10);
     mainLED = CRGB::Black;
     FastLED.show();
