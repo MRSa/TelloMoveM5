@@ -36,8 +36,13 @@ bool showErrorMessage;
 File streamFile;
 uint64_t cardSize;
 
-#define MAX_STREAM_BUFFER 46
-#define STREAM_BUFFER_SIZE 1600  //  > 1460(bytes.)
+#if defined(ARDUINO_M5STACK_ATOM)
+    #define MAX_STREAM_BUFFER 46
+    #define STREAM_BUFFER_SIZE 1600  //  > 1460(bytes.)
+#else
+    #define MAX_STREAM_BUFFER 46
+    #define STREAM_BUFFER_SIZE 1600  //  > 1460(bytes.)
+#endif
 int currentBufferIndex;
 int readBufferIndex;
 uint64_t writeDataSize = 0;
@@ -487,63 +492,71 @@ void receiveHandler()
     displayMessage("(命令受信)", TFT_LIGHTGREY);
 }
 
-void checkBoardType()
-{
-    try
+
+#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+    void checkBoardType()
     {
-      boardType = M5.getBoard();
-      const char* name;
-      switch (boardType)
-      {
-        case m5::board_t::board_M5Stack:        name = "Stack";       break;
-        case m5::board_t::board_M5StackCore2:   name = "StackCore2";  break;
-        case m5::board_t::board_M5StickC:       name = "StickC";      break;
-        case m5::board_t::board_M5StickCPlus:   name = "StickCPlus";  break;
-        case m5::board_t::board_M5StickCPlus2:  name = "StickCPlus2"; break;
-        case m5::board_t::board_M5StackCoreInk: name = "CoreInk";     break;
-        case m5::board_t::board_M5Paper:        name = "Paper";       break;
-        case m5::board_t::board_M5Tough:        name = "Tough";       break;
-        case m5::board_t::board_M5Station:      name = "Station";     break;
-        case m5::board_t::board_M5StackCoreS3:  name = "StackS3";     break;
-        case m5::board_t::board_M5AtomS3:       name = "ATOMS3";      break;
-        case m5::board_t::board_M5Dial:         name = "DIAL";        break;
-        case m5::board_t::board_M5DinMeter:     name = "DinMeter";    break;
-        case m5::board_t::board_M5Cardputer:    name = "Cardputer";   break;
-        case m5::board_t::board_M5AirQ:         name = "AirQ";        break;
-        case m5::board_t::board_M5VAMeter:      name = "VAMeter";     break;
-        case m5::board_t::board_M5StackCoreS3SE: name = "StackS3SE";  break;
-        case m5::board_t::board_M5AtomS3R:      name = "ATOMS3R";     break;
-        case m5::board_t::board_M5PaperS3:      name = "PaperS3";     break;
-        case m5::board_t::board_M5CoreMP135:    name = "MP135";       break;
-        case m5::board_t::board_M5StampPLC:     name = "StampPLC";    break;
-        case m5::board_t::board_M5Tab5:         name = "Tab5";        break;
-        case m5::board_t::board_M5Atom:         name = "ATOM";        break;
-        case m5::board_t::board_M5AtomPsram:    name = "ATOM PSRAM";  break;
-        case m5::board_t::board_M5AtomU:        name = "ATOM U";      break;
-        case m5::board_t::board_M5Camera:       name = "Camera";      break;
-        case m5::board_t::board_M5TimerCam:     name = "TimerCamera"; break;
-        case m5::board_t::board_M5StampPico:    name = "StampPico";   break;
-        case m5::board_t::board_M5StampC3:      name = "StampC3";     break;
-        case m5::board_t::board_M5StampC3U:     name = "StampC3U";    break;
-        case m5::board_t::board_M5StampS3:      name = "StampS3";     break;
-        case m5::board_t::board_M5AtomS3Lite:   name = "ATOMS3Lite";  break;        
-        case m5::board_t::board_M5AtomS3U:      name = "AtomS3U";     break;
-        case m5::board_t::board_M5Capsule:      name = "Capsule";     break;
-        case m5::board_t::board_M5NanoC6:       name = "NanoC6";      break;
-        case m5::board_t::board_M5AtomMatrix:   name = "AtomMatrix";  break;
-        case m5::board_t::board_M5AtomEcho:     name = "AtomEcho";    break;
-        case m5::board_t::board_M5AtomS3RExt:   name = "AtomS3RExt";  break;
-        case m5::board_t::board_M5AtomS3RCam:   name = "AtomS3RCam";  break;
-        default:                                name = "UNKNOWN";     break;
-      }
-      Serial.print("BOARD TYPE: ");
-      Serial.println(name);
+        // do nothing...
     }
-    catch (...)
+#else
+    void checkBoardType()
     {
-        Serial.println("Failed to get board type.");
+        try
+        {
+            boardType = M5.getBoard();
+            const char* name;
+            switch (boardType)
+            {
+                case m5::board_t::board_M5Stack:        name = "Stack";       break;
+                case m5::board_t::board_M5StackCore2:   name = "StackCore2";  break;
+                case m5::board_t::board_M5StickC:       name = "StickC";      break;
+                case m5::board_t::board_M5StickCPlus:   name = "StickCPlus";  break;
+                case m5::board_t::board_M5StickCPlus2:  name = "StickCPlus2"; break;
+                case m5::board_t::board_M5StackCoreInk: name = "CoreInk";     break;
+                case m5::board_t::board_M5Paper:        name = "Paper";       break;
+                case m5::board_t::board_M5Tough:        name = "Tough";       break;
+                case m5::board_t::board_M5Station:      name = "Station";     break;
+                case m5::board_t::board_M5StackCoreS3:  name = "StackS3";     break;
+                case m5::board_t::board_M5AtomS3:       name = "ATOMS3";      break;
+                case m5::board_t::board_M5Dial:         name = "DIAL";        break;
+                case m5::board_t::board_M5DinMeter:     name = "DinMeter";    break;
+                case m5::board_t::board_M5Cardputer:    name = "Cardputer";   break;
+                case m5::board_t::board_M5AirQ:         name = "AirQ";        break;
+                case m5::board_t::board_M5VAMeter:      name = "VAMeter";     break;
+                case m5::board_t::board_M5StackCoreS3SE: name = "StackS3SE";  break;
+                case m5::board_t::board_M5AtomS3R:      name = "ATOMS3R";     break;
+                case m5::board_t::board_M5PaperS3:      name = "PaperS3";     break;
+                case m5::board_t::board_M5CoreMP135:    name = "MP135";       break;
+                case m5::board_t::board_M5StampPLC:     name = "StampPLC";    break;
+                case m5::board_t::board_M5Tab5:         name = "Tab5";        break;
+                case m5::board_t::board_M5Atom:         name = "ATOM";        break;
+                case m5::board_t::board_M5AtomPsram:    name = "ATOM PSRAM";  break;
+                case m5::board_t::board_M5AtomU:        name = "ATOM U";      break;
+                case m5::board_t::board_M5Camera:       name = "Camera";      break;
+                case m5::board_t::board_M5TimerCam:     name = "TimerCamera"; break;
+                case m5::board_t::board_M5StampPico:    name = "StampPico";   break;
+                case m5::board_t::board_M5StampC3:      name = "StampC3";     break;
+                case m5::board_t::board_M5StampC3U:     name = "StampC3U";    break;
+                case m5::board_t::board_M5StampS3:      name = "StampS3";     break;
+                case m5::board_t::board_M5AtomS3Lite:   name = "ATOMS3Lite";  break;        
+                case m5::board_t::board_M5AtomS3U:      name = "AtomS3U";     break;
+                case m5::board_t::board_M5Capsule:      name = "Capsule";     break;
+                case m5::board_t::board_M5NanoC6:       name = "NanoC6";      break;
+                case m5::board_t::board_M5AtomMatrix:   name = "AtomMatrix";  break;
+                case m5::board_t::board_M5AtomEcho:     name = "AtomEcho";    break;
+                case m5::board_t::board_M5AtomS3RExt:   name = "AtomS3RExt";  break;
+                case m5::board_t::board_M5AtomS3RCam:   name = "AtomS3RCam";  break;
+                default:                                name = "UNKNOWN";     break;
+            }
+            Serial.print("BOARD TYPE: ");
+            Serial.println(name);
+        }
+        catch (...)
+        {
+            Serial.println("Failed to get board type.");
+        }
     }
-}
+#endif
 
 void prepareUnitASR()
 {
