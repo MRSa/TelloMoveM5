@@ -11,6 +11,11 @@
 #include <WiFi.h>
 #include <Wire.h>
 
+#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+    #include <FastLED.h>
+    CRGB mainLED;
+#endif
+
 // ----- for UnitASR
 ASRUnit asr;
 AsyncUDP udp;
@@ -40,14 +45,24 @@ uint64_t writeBlocks = 0;
 byte streamBuffer[MAX_STREAM_BUFFER][STREAM_BUFFER_SIZE];
 int streamBufferSize[MAX_STREAM_BUFFER];
 
-enum { spi_sck = 0, spi_miso = 36, spi_mosi = 26, spi_ss = -1 };
+#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+    enum { spi_sck = 23, spi_miso = 33, spi_mosi = 19, spi_ss = -1 };
+#else     // #if defined(ARDUINO_M5STACK_STICKC_PLUS) || defined(ARDUINO_M5STACK_STICKC_PLUS2)
+    enum { spi_sck = 0, spi_miso = 36, spi_mosi = 26, spi_ss = -1 };
+#endif
+
 //#define HSPI_CLK 1500000
 //#define HSPI_CLK 2000000
 //#define HSPI_CLK 2500000
 //#define HSPI_CLK 3000000
 #define HSPI_CLK 3500000
 //#define HSPI_CLK 4000000
-SPIClass SPI_EXT = SPIClass(HSPI);
+
+#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+    SPIClass SPI_EXT = SPIClass(HSPI);
+#else    // #if defined(ARDUINO_M5STACK_STICKC_PLUS) || defined(ARDUINO_M5STACK_STICKC_PLUS2)
+    SPIClass SPI_EXT = SPIClass(HSPI);
+#endif
 
 m5::board_t boardType;
 
@@ -58,59 +73,86 @@ m5::board_t boardType;
 //const char* wifi_ssid = "**********";  // defined in 'wifi_creds.h'
 //const char* wifi_key = "**********";   // defined in 'wifi_creds.h'
 
-void displayMessage(char *message, int fontColor = TFT_WHITE)
-{
-    M5.Lcd.fillScreen(TFT_BLACK);
-	M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-    M5.Lcd.setCursor(5, 0);
-    M5.Lcd.setFont(&fonts::efontJA_24_b);
-    M5.Lcd.print("TelloMoveM5\n\n");
-
-    //M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
-    M5.Lcd.setFont(&fonts::efontJA_24);
-	M5.Lcd.setTextColor(fontColor, TFT_BLACK);
-    M5.Lcd.setCursor(5, 30);
-    M5.Display.println(message);
-
-    M5.Lcd.setCursor(0, 70);
-    char batteryM5[64];
-    sprintf(batteryM5, "    Batt.(M5)    : %d %%", batteryRemainM5);
-    M5.Lcd.setFont(&fonts::efontJA_16);
-    M5.Lcd.setTextColor(getFontColor(batteryRemainM5), TFT_BLACK);
-    M5.Display.println(batteryM5);
-
-    if (batteryRemainTello > 0)
+#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+    void displayMessage(char *message, int fontColor = TFT_WHITE)
     {
-        M5.Lcd.setCursor(0, 90);
-        sprintf(batteryM5, "    Batt.(Tello) : %d %%", batteryRemainTello);
-        M5.Lcd.setFont(&fonts::efontJA_16);
-        M5.Lcd.setTextColor(getFontColor(batteryRemainTello), TFT_BLACK);
-        M5.Display.println(batteryM5);
-    }
-
-    if (isEnableCard)
-    {
-        char displayStr[48];
-        M5.Lcd.setCursor(20, 110);
-        M5.Lcd.setFont(&fonts::efontJA_16);
-        if (isFileOpenError)
+        if ((isEnableCard)&&(isVideoRecording))
         {
-            sprintf(displayStr, "OPEN ERROR : VIDEO%02d.MOV", 0);
-            M5.Lcd.setTextColor(TFT_ORANGE, TFT_BLACK);           
-        }
-        else if (isVideoRecording)
-        {
-            sprintf(displayStr, "REC. VIDEO (VIDEO%02d.MOV)", 0);
-            M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
+            if (batteryRemainTello < 50) {
+                mainLED = CRGB::LightGoldenrodYellow;
+            } else if  (batteryRemainTello < 25) {
+                mainLED = CRGB::MediumVioletRed;
+            } else {
+                mainLED = CRGB::LimeGreen;
+            }
         }
         else
         {
-            sprintf(displayStr, "CARD READY (%dMB)", cardSize);
-            M5.Lcd.setTextColor(TFT_LIGHTGREY, TFT_BLACK);           
+            if (batteryRemainTello < 50) {
+                mainLED = CRGB::OrangeRed;
+            } else if  (batteryRemainTello < 25) {
+                mainLED = CRGB::Red;
+            } else {
+                mainLED = CRGB::Green;
+            }
         }
-        M5.Display.println(displayStr);
+        FastLED.show();
     }
-}
+#else  // #if defined(ARDUINO_M5STACK_STICKC_PLUS) || defined(ARDUINO_M5STACK_STICKC_PLUS2)
+    void displayMessage(char *message, int fontColor = TFT_WHITE)
+    {
+        M5.Lcd.fillScreen(TFT_BLACK);
+	    M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+        M5.Lcd.setCursor(5, 0);
+        M5.Lcd.setFont(&fonts::efontJA_24_b);
+        M5.Lcd.print("TelloMoveM5\n\n");
+
+        //M5.Lcd.setFont(&fonts::lgfxJapanGothic_16);
+        M5.Lcd.setFont(&fonts::efontJA_24);
+	    M5.Lcd.setTextColor(fontColor, TFT_BLACK);
+        M5.Lcd.setCursor(5, 30);
+        M5.Display.println(message);
+
+        M5.Lcd.setCursor(0, 70);
+        char batteryM5[64];
+        sprintf(batteryM5, "    Batt.(M5)    : %d %%", batteryRemainM5);
+        M5.Lcd.setFont(&fonts::efontJA_16);
+        M5.Lcd.setTextColor(getFontColor(batteryRemainM5), TFT_BLACK);
+        M5.Display.println(batteryM5);
+
+        if (batteryRemainTello > 0)
+        {
+            M5.Lcd.setCursor(0, 90);
+            sprintf(batteryM5, "    Batt.(Tello) : %d %%", batteryRemainTello);
+            M5.Lcd.setFont(&fonts::efontJA_16);
+            M5.Lcd.setTextColor(getFontColor(batteryRemainTello), TFT_BLACK);
+            M5.Display.println(batteryM5);
+        }
+
+        if (isEnableCard)
+        {
+            char displayStr[48];
+            M5.Lcd.setCursor(20, 110);
+            M5.Lcd.setFont(&fonts::efontJA_16);
+            if (isFileOpenError)
+            {
+                sprintf(displayStr, "OPEN ERROR : VIDEO%02d.MOV", 0);
+                M5.Lcd.setTextColor(TFT_ORANGE, TFT_BLACK);           
+            }
+            else if (isVideoRecording)
+            {
+                sprintf(displayStr, "REC. VIDEO (VIDEO%02d.MOV)", 0);
+                M5.Lcd.setTextColor(TFT_RED, TFT_BLACK);
+            }
+            else
+            {
+                sprintf(displayStr, "CARD READY (%dMB)", cardSize);
+                M5.Lcd.setTextColor(TFT_LIGHTGREY, TFT_BLACK);           
+            }
+            M5.Display.println(displayStr);
+        }
+    }
+#endif
 
 void receivedStatus1(AsyncUDPPacket& packet)
 {
@@ -190,37 +232,46 @@ void sendCommandToTello(char *command)
     udp.sendTo(msg, destIp, dstPort);
 }
 
-void prepareScreen()
-{
-    M5.Lcd.setRotation(1); // 0: portrait, 1: Landscape
-    M5.Lcd.fillScreen(TFT_BLACK);
-    M5.Lcd.setCursor(0, 0);
-
-    M5.Lcd.setTextSize(1);
-	M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
-
-    //M5.Lcd.setTextFont(2);  // 8 x 16px
-    //M5.Lcd.setFont(&fonts::lgfxJapanGothic_16); // JP (8/12/16/20/24/28/32/36/40)
-    //M5.Lcd.setFont(&fonts::efontJA_16_b);       // jp BOLD (10/12/14/16/24)
-    //M5.Lcd.setFont(&fonts::efontJA_16);         // jp (10/12/14/16/24)
-
-    M5.Lcd.setFont(&fonts::efontJA_24_b);
-    M5.Lcd.print("TelloMoveM5\n\n");
-    M5.Lcd.setFont(&fonts::efontJA_24);
-}
-
-int getFontColor(int value)
-{
-    int color = TFT_WHITE;
-    if (batteryRemainM5 < 50) {
-        color = TFT_YELLOW;
-    } else if (batteryRemainM5 < 20) {
-        color = TFT_RED;
-    } else if (batteryRemainM5 < 20) {
-        color = TFT_DARKGREY;
+#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+    void prepareScreen()
+    {
+        mainLED = CRGB::Gray;
+        FastLED.show();
     }
-    return (color);
-}
+#else     // #if defined(ARDUINO_M5STACK_STICKC_PLUS) || defined(ARDUINO_M5STACK_STICKC_PLUS2)
+    void prepareScreen()
+    {
+        M5.Lcd.setRotation(1); // 0: portrait, 1: Landscape
+        M5.Lcd.fillScreen(TFT_BLACK);
+        M5.Lcd.setCursor(0, 0);
+
+        M5.Lcd.setTextSize(1);
+	    M5.Lcd.setTextColor(TFT_WHITE, TFT_BLACK);
+
+        //M5.Lcd.setTextFont(2);  // 8 x 16px
+        //M5.Lcd.setFont(&fonts::lgfxJapanGothic_16); // JP (8/12/16/20/24/28/32/36/40)
+        //M5.Lcd.setFont(&fonts::efontJA_16_b);       // jp BOLD (10/12/14/16/24)
+        //M5.Lcd.setFont(&fonts::efontJA_16);         // jp (10/12/14/16/24)
+
+        M5.Lcd.setFont(&fonts::efontJA_24_b);
+        M5.Lcd.print("TelloMoveM5\n\n");
+        M5.Lcd.setFont(&fonts::efontJA_24);
+    }
+
+    int getFontColor(int value)
+    {
+        int color = TFT_WHITE;
+        if (batteryRemainM5 < 50) {
+            color = TFT_YELLOW;
+        } else if (batteryRemainM5 < 20) {
+            color = TFT_RED;
+        } else if (batteryRemainM5 < 60) {
+            color = TFT_DARKGREY;
+        }
+        return (color);
+    }
+#endif
+
 
 void takeoffHandler()
 {
@@ -762,6 +813,13 @@ void setup()
     cfg.led_brightness = 96;
     M5.begin(cfg);
 
+#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+    // ----- RGB LED OFF : for M5 Atom
+    FastLED.addLeds<NEOPIXEL, 27>(&mainLED, 1);
+    FastLED.setBrightness(10);
+    mainLED = CRGB::Black;
+    FastLED.show();
+#else    // #if defined(ARDUINO_M5STACK_STICKC_PLUS) || defined(ARDUINO_M5STACK_STICKC_PLUS2)
     // --- ピンモードを設定
     gpio_pulldown_dis(GPIO_NUM_25);
     gpio_pullup_dis(GPIO_NUM_25);
@@ -769,6 +827,12 @@ void setup()
     // --- M5のバッテリ残量を取得する
     M5.Power.begin(); 
     batteryRemainM5 = M5.Power.getBatteryLevel();
+
+    // ----- LED(RED) OFF : for M5StickC Plus
+    pinMode(GPIO_NUM_10, OUTPUT);
+    digitalWrite(GPIO_NUM_10, HIGH);
+#endif
+
     batteryRemainTello = -1;
 
     showErrorMessage = false;
@@ -783,10 +847,6 @@ void setup()
     {
         streamBufferSize[i] = 0;
     }
-
-    // ----- LED(RED) OFF : for M5StickC Plus
-    pinMode(GPIO_NUM_10, OUTPUT);
-    digitalWrite(GPIO_NUM_10, HIGH);
 
     // ----- 画面表示の初期化
     prepareScreen();
@@ -856,8 +916,17 @@ void loop()
         Serial.println(asr.getCurrentRawMessage());
         Serial.println((asr.checkCurrentCommandHandler()));
     }
-
     M5.update();
+
+#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+    if (M5.BtnA.wasPressed()) {
+        // ----- Main Button (緊急停止ボタン)
+        displayMessage("EMERGENCY (Btn A)");
+        asr.sendComandNum(0x99);
+        emergencyHandler();
+        asr.printCommandList();
+    }
+#else    // #if defined(ARDUINO_M5STACK_STICKC_PLUS) || defined(ARDUINO_M5STACK_STICKC_PLUS2)
     if (M5.BtnA.wasPressed()) {
         // ----- Main Button（このボタンも緊急停止ボタンとする）
         displayMessage("EMERGENCY (Btn A)");
@@ -870,16 +939,22 @@ void loop()
         asr.sendComandNum(0x99);
         emergencyHandler();
     }
+#endif
 
     if ((isVideoRecording)&&(isEnableCard))
     {
         writeStreamData();
     }
 
+#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+
+#else    // #if defined(ARDUINO_M5STACK_STICKC_PLUS) || defined(ARDUINO_M5STACK_STICKC_PLUS2)
     int batteryRemain = M5.Power.getBatteryLevel();
     if (batteryRemain != batteryRemainM5)
     {
         batteryRemainM5 = batteryRemain;
         displayMessage("");
     }
+#endif
+
 }
