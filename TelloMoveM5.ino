@@ -81,24 +81,37 @@ m5::board_t boardType;
 #if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
     void displayMessage(char *message, int fontColor = TFT_WHITE)
     {
-        if ((isEnableCard)&&(isVideoRecording))
+        if (isEnableCard)
         {
-            if (batteryRemainTello < 50) {
-                mainLED = CRGB::LightGoldenrodYellow;
-            } else if  (batteryRemainTello < 25) {
-                mainLED = CRGB::MediumVioletRed;
-            } else {
-                mainLED = CRGB::LimeGreen;
+            if (isVideoRecording)
+            {
+                if (batteryRemainTello < 50) {
+                    mainLED = CRGB::Yellow;
+                } else if  (batteryRemainTello < 25) {
+                    mainLED = CRGB::Purple;
+                } else {
+                    mainLED = CRGB::DarkBlue;
+                }
+            }
+            else
+            {
+                if (batteryRemainTello < 50) {
+                    mainLED = CRGB::Orange;
+                } else if  (batteryRemainTello < 25) {
+                    mainLED = CRGB::Red;
+                } else {
+                    mainLED = CRGB::Green;
+                }
             }
         }
         else
         {
             if (batteryRemainTello < 50) {
-                mainLED = CRGB::OrangeRed;
+                mainLED = CRGB::Gold;
             } else if  (batteryRemainTello < 25) {
-                mainLED = CRGB::Red;
+                mainLED = CRGB::HotPink;
             } else {
-                mainLED = CRGB::Green;
+                mainLED = CRGB::Blue;
             }
         }
         FastLED.show();
