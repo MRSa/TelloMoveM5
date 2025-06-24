@@ -50,18 +50,30 @@ uint64_t writeBlocks = 0;
 byte streamBuffer[MAX_STREAM_BUFFER][STREAM_BUFFER_SIZE];
 int streamBufferSize[MAX_STREAM_BUFFER];
 
-#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
-    enum { spi_sck = 23, spi_miso = 33, spi_mosi = 19, spi_ss = -1 };
-#else     // #if defined(ARDUINO_M5STACK_STICKC_PLUS) || defined(ARDUINO_M5STACK_STICKC_PLUS2)
-    enum { spi_sck = 0, spi_miso = 36, spi_mosi = 26, spi_ss = -1 };
+#if defined(ARDUINO_M5STACK_ATOM)
+    enum { spi_sck = 23, spi_miso = 33, spi_mosi = 19, spi_ss = 21 };  // IO21は未接続pin
+#elif defined(ARDUINO_M5STACK_ATOMS3)
+    enum { spi_sck = 7, spi_miso = 8, spi_mosi = 6, spi_ss = 39 };    // IO38 or IO39は未接続pin
+#elif defined(ARDUINO_M5STACK_STICKC_PLUS2)
+    enum { spi_sck = 0, spi_miso = 36, spi_mosi = 26, spi_ss = 20 };   // IO20は未接続pin
+#else  // #if defined(ARDUINO_M5STACK_STICKC_PLUS)
+    enum { spi_sck = 0, spi_miso = 36, spi_mosi = 26, spi_ss = 19 };  // IO19は未接続pin
 #endif
 
-//#define HSPI_CLK 1500000
-//#define HSPI_CLK 2000000
-//#define HSPI_CLK 2500000
-//#define HSPI_CLK 3000000
-#define HSPI_CLK 3500000
-//#define HSPI_CLK 4000000
+#if defined(ARDUINO_M5STACK_ATOM)
+    //#define HSPI_CLK 10000000
+    //#define HSPI_CLK 20000000
+    #define HSPI_CLK 35000000
+    //#define HSPI_CLK 40000000
+#elif defined(ARDUINO_M5STACK_ATOMS3)
+    //#define HSPI_CLK 10000000
+    //#define HSPI_CLK 20000000
+    #define HSPI_CLK 40000000
+#else
+    //#define HSPI_CLK 10000000
+    //#define HSPI_CLK 20000000
+    #define HSPI_CLK 40000000
+#endif
 
 #if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
     SPIClass SPI_EXT = SPIClass(HSPI);
@@ -223,12 +235,16 @@ void receivedVideoStream(AsyncUDPPacket& packet)
         else
         {
             currentBufferIndex++;
+
         }
+        streamBufferSize[currentBufferIndex - 1] = 0;
     }
-/*
-    //char messageBuffer[48];
-    //sprintf(messageBuffer, "RECV. %ld bytes.", packet.length());
+
+    // ----- 受信データのサイズ、次の書き込み場所をダンプする
+    //char messageBuffer[64];
+    //sprintf(messageBuffer, "RECV. %ld bytes. [next:%d]", packet.length(), currentBufferIndex);
     //Serial.println(messageBuffer);
+/*
     if ((isVideoRecording)&&(isEnableCard))
     {
         // SD Card有効かつビデオ録画中で、SDカードオープン時に受信データをファイル書き込み
@@ -716,7 +732,7 @@ void prepareExternalCard()
     isVideoRecording = false;
     cardSize = 0;
 
-    // ----- SDカード用SPIポート初期化（SCK:HAT_G0, MISO:HAT_G36, MOSI:HAT_G26, SS:物理ピン無し"-1"）
+    // ----- SDカード用SPIポート初期化
     SPI_EXT.end();
     delay(100);
     SPI_EXT.begin(spi_sck, spi_miso, spi_mosi, spi_ss);
@@ -804,9 +820,9 @@ void writeStreamData()
                 writeBlocks = writeBlocks + 1;
 
                 // ------ 書き込みデータのログ出力
-                //char message[64];
-                //sprintf(message, "WRITE DATA: %d bytes. [%d]", dataSize, index);
-                //Serial.println(message);
+                // char message[64];
+                // sprintf(message, "WRITE DATA: %d bytes. [%d]", dataSize, index);
+                // Serial.println(message);
             }
         }
         else
@@ -817,6 +833,9 @@ void writeStreamData()
                 sprintf(msg, " rIdx:%d cIdx:%d size:%lld cnt:%lld", readBufferIndex, currentBufferIndex, writeDataSize, writeBlocks);
                 Serial.print("FILE OPEN Failure...");
                 Serial.println(msg);
+
+                // ----- エラー発生の発声
+                asr.sendComandNum(0x5b); 
             }
             isFileOpenError = true;
             showErrorMessage = true;
@@ -825,6 +844,11 @@ void writeStreamData()
     catch (...)
     {
         Serial.println("FILE WRITE Exception...");
+        if (!showErrorMessage)
+        {
+            // ----- エラー発生の発声
+            asr.sendComandNum(0x5b); 
+        }       
         isFileOpenError = true;
     }
 }
@@ -843,11 +867,15 @@ void setup()
     // ----- RGB LED OFF : for M5 Atom
     FastLED.addLeds<NEOPIXEL, 27>(&mainLED, 1);
 #elif defined(ARDUINO_M5STACK_ATOMS3)
-    // ----- RGB LED OFF : for M5 Atom
+    // ----- RGB LED OFF : for M5 Atom S3
     FastLED.addLeds<NEOPIXEL, 35>(&mainLED, 1);
 #endif
 
-#if defined(ARDUINO_M5STACK_ATOM) || defined(ARDUINO_M5STACK_ATOMS3)
+#if defined(ARDUINO_M5STACK_ATOM)
+    FastLED.setBrightness(10);
+    mainLED = CRGB::Black;
+    FastLED.show();
+#elif  defined(ARDUINO_M5STACK_ATOMS3)
     FastLED.setBrightness(10);
     mainLED = CRGB::Black;
     FastLED.show();
@@ -864,6 +892,10 @@ void setup()
     pinMode(GPIO_NUM_10, OUTPUT);
     digitalWrite(GPIO_NUM_10, HIGH);
 #endif
+
+    // ----- ダミーのピンの出力設定 (SPI-SS)
+    Serial.println("- - - - - -");
+    pinMode(spi_ss, OUTPUT); //
 
     batteryRemainTello = -1;
 
@@ -882,6 +914,7 @@ void setup()
 
     // ----- 画面表示の初期化
     prepareScreen();
+    Serial.println("- - - - - -");
 
     // ----- 開始のログ出力
     Serial.println("-=-=-=-=-=-=-=-=-=-=-=-=-=-");
